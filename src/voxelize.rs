@@ -26,7 +26,7 @@ impl<T: Float> Triangle<T> {
         Self { points, aabb }
     }
     fn grid_aabb(&self, step: T) -> AABB<isize> {
-        AABB{
+        AABB {
             min: vector_to_grid_step_floor(&self.aabb.min, step),
             max: vector_to_grid_step_floor(&self.aabb.max, step),
         }
@@ -37,9 +37,13 @@ impl<T: Float> Triangle<T> {
         for i in (aabb.min.x)..(aabb.max.x + 2) {
             for j in (aabb.min.y)..(aabb.max.y + 2) {
                 for k in (aabb.min.z)..(aabb.max.z + 2) {
-                    let centor = Vector3::new(i, j, k);
-                    let voxel = Voxel::new(&centor, step);
-                    if triangle_aabb_intersects(self, &voxel.aabb()) {
+                    let centor = Vector3::new(
+                        T::from(i).unwrap(),
+                        T::from(i).unwrap(),
+                        T::from(i).unwrap(),
+                    ) * step;
+                    let aabb = AABB::new(&centor, step);
+                    if triangle_aabb_intersects(self, &aabb) {
                         voxels.push([i, j, k]);
                     }
                 }
@@ -55,6 +59,7 @@ fn to_grid_step_floor<T: Float>(value: T, step: T) -> isize {
     div.floor().to_isize().expect("cannot convert to isize")
 }
 
+#[inline]
 fn vector_to_grid_step_floor<T: Float>(vector: &Vector3<T>, step: T) -> Vector3<isize> {
     Vector3::new(
         to_grid_step_floor(vector.x, step),
@@ -69,76 +74,188 @@ pub(crate) struct AABB<T: Copy> {
     pub max: Vector3<T>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct Voxel<T: Copy> {
-    centor: Vector3<isize>,
-    centor_scaled: Vector3<T>,
-    step: T,
+impl<T: Float> AABB<T> {
+    fn new(centor: &Vector3<T>, size: T) -> Self {
+        let half = size / (T::one() + T::one());
+        AABB {
+            min: *centor - Vector3::new(half, half, half),
+            max: *centor - Vector3::new(half, half, half),
+        }
+    }
 }
 
-impl<T: Float> Voxel<T> {
-    #[inline]
-    fn new(centor: &Vector3<isize>, step: T) -> Self {
-        let centor_scaled = Vector3::new(
-            T::from(centor.x).expect("cannot convert from isize") * step,
-            T::from(centor.y).expect("cannot convert from isize") * step,
-            T::from(centor.z).expect("cannot convert from isize") * step,
-        );
-        Self {
-            centor: centor.clone(),
-            centor_scaled,
+pub struct Voxels<T: Float> {
+    pub grid_positions: HashSet<[isize; 3]>,
+    pub step: T,
+}
+impl<T: Float> Voxels<T> {
+    pub fn voxelize(vertices: &Vec<[T; 3]>, indices: &Vec<[usize; 3]>, step: T) -> Self {
+        let mut tris = Vec::new();
+        for index in indices {
+            let p1 = Vector3::new(
+                vertices[index[0]][0],
+                vertices[index[0]][1],
+                vertices[index[0]][2],
+            );
+            let p2 = Vector3::new(
+                vertices[index[1]][0],
+                vertices[index[1]][1],
+                vertices[index[1]][2],
+            );
+            let p3 = Vector3::new(
+                vertices[index[2]][0],
+                vertices[index[2]][1],
+                vertices[index[2]][2],
+            );
+            tris.push(Triangle::new(&p1, &p2, &p3));
+        }
+        let mut voxels = Vec::new();
+        for tri in tris {
+            voxels.append(&mut tri.voxelize(step));
+        }
+        Voxels {
+            grid_positions: voxels.into_iter().collect::<HashSet<_>>(),
             step,
         }
     }
-    pub(crate) fn aabb(&self) -> AABB<T> {
-        let two = T::one() + T::one();
-        let eps = T::epsilon() * (two + two + two + two + two);
-        let half = self.step / two + eps;
-        let min = Vector3::new(
-            self.centor_scaled.x - half,
-            self.centor_scaled.y - half,
-            self.centor_scaled.z - half,
+    pub fn fill(&mut self) {
+        let ((max_x, max_y, max_z), (min_x, min_y, min_z)) = self.grid_positions.iter().fold(
+            (
+                (isize::min_value(),
+                isize::min_value(),
+                isize::min_value()),
+                (isize::max_value(),
+                isize::max_value(),
+                isize::max_value()),
+            ),
+            |(max,min), p| {
+                (
+                    (max.0.max(p[0]),
+                    max.1.max(p[1]),
+                    max.2.max(p[2])),
+                    (min.0.min(p[0]),
+                    min.1.min(p[1]),
+                    min.2.min(p[2])),
+                )
+            },
         );
-        let max = Vector3::new(
-            self.centor_scaled.x + half,
-            self.centor_scaled.y + half,
-            self.centor_scaled.z + half,
-        );
-        AABB { min, max }
+        let mut do_fill = false;
+        for i in min_x..max_x+1{
+            for j in min_y..max_y+1{
+                for k in min_z..max_z+1{
+                    let contains = self.grid_positions.contains(&[i,j,k]);
+                    if contains{
+                        do_fill = !do_fill;
+                    }
+                    if !contains && do_fill{
+                        self.grid_positions.insert([i,j,k]);
+                    }
+                }
+            }
+        }
+    }
+    pub fn vertices_indices_normals(&self) -> (Vec<[T; 3]>, Vec<[usize; 3]>, Vec<[T; 3]>) {
+        let mut vertices = Vec::new();
+        let mut normals = Vec::new();
+        for voxel_pos in self.grid_positions.iter() {
+            let x_p =
+                !self
+                    .grid_positions
+                    .contains(&[voxel_pos[0] + 1, voxel_pos[1], voxel_pos[2]]);
+            let x_n =
+                !self
+                    .grid_positions
+                    .contains(&[voxel_pos[0] - 1, voxel_pos[1], voxel_pos[2]]);
+            let y_p =
+                !self
+                    .grid_positions
+                    .contains(&[voxel_pos[0], voxel_pos[1] + 1, voxel_pos[2]]);
+            let y_n =
+                !self
+                    .grid_positions
+                    .contains(&[voxel_pos[0], voxel_pos[1] - 1, voxel_pos[2]]);
+            let z_p =
+                !self
+                    .grid_positions
+                    .contains(&[voxel_pos[0], voxel_pos[1], voxel_pos[2] + 1]);
+            let z_n =
+                !self
+                    .grid_positions
+                    .contains(&[voxel_pos[0], voxel_pos[1], voxel_pos[2] - 1]);
+            let mesh_dir = [x_p, x_n, y_p, y_n, z_p, z_n];
+            let mesh_normal = voxel_to_mesh(*voxel_pos, self.step, mesh_dir);
+            for (mut points, normal) in mesh_normal.into_iter() {
+                normals.push(normal);
+                vertices.append(&mut points);
+            }
+        }
+        let len = vertices.len();
+        let indices: Vec<[usize; 3]> = (0..len)
+            .step_by(3)
+            .zip((0..len).skip(1).step_by(3).zip(0..len).skip(2).step_by(3))
+            .map(|(i, (j, k))| [i, j, k])
+            .collect();
+        (vertices, indices, normals)
     }
 }
 
-pub fn surface_voxelize<T: Float>(
-    vertices: &Vec<[T; 3]>,
-    indices: &Vec<[usize; 3]>,
+fn voxel_to_mesh<T: Float>(
+    voxel: [isize; 3],
     step: T,
-) -> Vec<[isize; 3]> {
-    let mut tris = Vec::new();
-    for index in indices {
-        let p1 = Vector3::new(
-            vertices[index[0]][0],
-            vertices[index[0]][1],
-            vertices[index[0]][2],
-        );
-        let p2 = Vector3::new(
-            vertices[index[1]][0],
-            vertices[index[1]][1],
-            vertices[index[1]][2],
-        );
-        let p3 = Vector3::new(
-            vertices[index[2]][0],
-            vertices[index[2]][1],
-            vertices[index[2]][2],
-        );
-        tris.push(Triangle::new(&p1, &p2, &p3));
+    mesh_direction: [bool; 6],
+) -> Vec<(Vec<[T; 3]>, [T; 3])> {
+    let half = step / (T::one() + T::one());
+    let x = T::from(voxel[0]).unwrap() * step;
+    let y = T::from(voxel[1]).unwrap() * step;
+    let z = T::from(voxel[2]).unwrap() * step;
+    let p1 = Vector3::new(x + half, y + half, z + half);
+    let p2 = Vector3::new(x + half, y + half, z - half);
+    let p3 = Vector3::new(x + half, y - half, z + half);
+    let p4 = Vector3::new(x + half, y - half, z - half);
+    let p5 = Vector3::new(x - half, y + half, z + half);
+    let p6 = Vector3::new(x - half, y + half, z - half);
+    let p7 = Vector3::new(x - half, y - half, z + half);
+    let p8 = Vector3::new(x - half, y - half, z - half);
+
+    let mut mesh = Vec::new();
+    // x plus
+    if mesh_direction[0] {
+        mesh.push(tri_mesh(&p1, &p2, &p3));
+        mesh.push(tri_mesh(&p3, &p2, &p4));
     }
-    let mut voxels = Vec::new();
-    for tri in tris {
-        voxels.append(&mut tri.voxelize(step));
+    // x minus
+    if mesh_direction[1] {
+        mesh.push(tri_mesh(&p5, &p7, &p6));
+        mesh.push(tri_mesh(&p8, &p6, &p7));
     }
-    voxels
-        .into_iter()
-        .collect::<HashSet<_>>()
-        .into_iter()
-        .collect()
+    // y plus
+    if mesh_direction[2] {
+        mesh.push(tri_mesh(&p1, &p5, &p6));
+        mesh.push(tri_mesh(&p1, &p6, &p2));
+    }
+    // y minus
+    if mesh_direction[3] {
+        mesh.push(tri_mesh(&p7, &p3, &p8));
+        mesh.push(tri_mesh(&p3, &p4, &p8));
+    }
+    // z plus
+    if mesh_direction[4] {
+        mesh.push(tri_mesh(&p7, &p5, &p1));
+        mesh.push(tri_mesh(&p7, &p1, &p3));
+    }
+    // z minus
+    if mesh_direction[5] {
+        mesh.push(tri_mesh(&p6, &p8, &p2));
+        mesh.push(tri_mesh(&p8, &p4, &p2));
+    }
+    mesh
+}
+
+#[inline]
+fn tri_mesh<T: Float>(p1: &Vector3<T>, p2: &Vector3<T>, p3: &Vector3<T>) -> (Vec<[T; 3]>, [T; 3]) {
+    let normal = (*p2 - *p1).cross(&(*p3 - *p1)).normalize();
+    (
+        vec![[p1.x, p1.y, p1.z], [p2.x, p2.y, p2.z], [p3.x, p3.y, p3.z]],
+        [normal.x, normal.y, normal.z],
+    )
 }

@@ -4,11 +4,7 @@ use super::vector::Vector3;
 use super::voxelize::{Triangle, AABB};
 use num_traits::Float;
 
-
-pub(crate) fn triangle_aabb_intersects<T: Copy + Float>(
-    triangle: &Triangle<T>,
-    aabb: &AABB<T>,
-) -> bool {
+pub(crate) fn triangle_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     // 3 axes tests
     let aabb_aabb_sat = aabb_aabb_intersects(triangle, aabb);
     if !aabb_aabb_sat {
@@ -23,7 +19,7 @@ pub(crate) fn triangle_aabb_intersects<T: Copy + Float>(
     tri_edge_aabb_intersects(triangle, aabb)
 }
 
-fn aabb_aabb_intersects<T: Copy + Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
+fn aabb_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     let two = T::one() + T::one();
     let a_c = (aabb.max + aabb.min) / two;
     let a_h = (aabb.max - aabb.min) / two;
@@ -37,7 +33,7 @@ fn aabb_aabb_intersects<T: Copy + Float>(triangle: &Triangle<T>, aabb: &AABB<T>)
         && (b_c.z - b_h.z <= a_c.z + a_h.z)
 }
 
-fn plane_aabb_intersects<T: Copy + Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
+fn plane_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     let normal =
         (triangle.points[1] - triangle.points[0]).cross(&(triangle.points[2] - triangle.points[0]));
     let plane_point = triangle.points[0];
@@ -51,7 +47,7 @@ fn plane_aabb_intersects<T: Copy + Float>(triangle: &Triangle<T>, aabb: &AABB<T>
     !((s - e) > T::zero() || (s + e) < T::zero())
 }
 
-fn tri_edge_aabb_intersects<T: Copy + Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
+fn tri_edge_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     let two = T::one() + T::one();
     let c = (aabb.max + aabb.min) / two;
     let h = (aabb.max - aabb.min) / two;

@@ -1,4 +1,4 @@
-use num_traits::{One, Zero};
+use num_traits::{Float, One, Zero};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Copy, PartialEq)]
@@ -35,6 +35,14 @@ impl<T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Zero + One + Copy>
     #[inline]
     pub(crate) fn z_axis() -> Self {
         Self::new(T::zero(), T::zero(), T::one())
+    }
+}
+
+impl<T: Float> Vector3<T> {
+    #[inline]
+    pub(crate) fn normalize(&self) -> Self {
+        let norm = self.dot(self).sqrt();
+        *self / norm
     }
 }
 
