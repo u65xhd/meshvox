@@ -39,8 +39,8 @@ impl<T: Float> Triangle<T> {
                 for k in (aabb.min.z)..(aabb.max.z + 2) {
                     let centor = Vector3::new(
                         T::from(i).unwrap(),
-                        T::from(i).unwrap(),
-                        T::from(i).unwrap(),
+                        T::from(j).unwrap(),
+                        T::from(k).unwrap(),
                     ) * step;
                     let aabb = AABB::new(&centor, step);
                     if triangle_aabb_intersects(self, &aabb) {
@@ -79,7 +79,7 @@ impl<T: Float> AABB<T> {
         let half = size / (T::one() + T::one());
         AABB {
             min: *centor - Vector3::new(half, half, half),
-            max: *centor - Vector3::new(half, half, half),
+            max: *centor + Vector3::new(half, half, half),
         }
     }
 }
@@ -89,6 +89,12 @@ pub struct Voxels<T: Float> {
     pub step: T,
 }
 impl<T: Float> Voxels<T> {
+    pub fn new(grid_positions: &HashSet<[isize;3]>, step: T) -> Self{
+        Self{
+            grid_positions: grid_positions.clone(),
+            step,
+        }
+    }
     pub fn voxelize(vertices: &Vec<[T; 3]>, indices: &Vec<[usize; 3]>, step: T) -> Self {
         let mut tris = Vec::new();
         for index in indices {
@@ -146,9 +152,8 @@ impl<T: Float> Voxels<T> {
             }
         }
     }
-    pub fn vertices_indices_normals(&self) -> (Vec<[T; 3]>, Vec<[usize; 3]>, Vec<[T; 3]>) {
-        let mut vertices = Vec::new();
-        let mut normals = Vec::new();
+    pub fn triangle_vertices_normals(&self) -> Vec<(Vec<[T; 3]>, [T; 3])> {
+        let mut meshes = Vec::new();
         for voxel_pos in self.grid_positions.iter() {
             let x_p =
                 !self
@@ -175,19 +180,10 @@ impl<T: Float> Voxels<T> {
                     .grid_positions
                     .contains(&[voxel_pos[0], voxel_pos[1], voxel_pos[2] - 1]);
             let mesh_dir = [x_p, x_n, y_p, y_n, z_p, z_n];
-            let mesh_normal = voxel_to_mesh(*voxel_pos, self.step, mesh_dir);
-            for (mut points, normal) in mesh_normal.into_iter() {
-                normals.push(normal);
-                vertices.append(&mut points);
-            }
+            let mut mesh = voxel_to_mesh(*voxel_pos, self.step, mesh_dir);
+            meshes.append(&mut mesh);
         }
-        let len = vertices.len();
-        let indices: Vec<[usize; 3]> = (0..len)
-            .step_by(3)
-            .zip((0..len).skip(1).step_by(3).zip(0..len).skip(2).step_by(3))
-            .map(|(i, (j, k))| [i, j, k])
-            .collect();
-        (vertices, indices, normals)
+        meshes
     }
     pub fn point_cloud(&self) -> Vec<[T; 3]> {
         self.grid_positions
