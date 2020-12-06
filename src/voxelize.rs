@@ -121,34 +121,26 @@ impl<T: Float> Voxels<T> {
     pub fn fill(&mut self) {
         let ((max_x, max_y, max_z), (min_x, min_y, min_z)) = self.grid_positions.iter().fold(
             (
-                (isize::min_value(),
-                isize::min_value(),
-                isize::min_value()),
-                (isize::max_value(),
-                isize::max_value(),
-                isize::max_value()),
+                (isize::min_value(), isize::min_value(), isize::min_value()),
+                (isize::max_value(), isize::max_value(), isize::max_value()),
             ),
-            |(max,min), p| {
+            |(max, min), p| {
                 (
-                    (max.0.max(p[0]),
-                    max.1.max(p[1]),
-                    max.2.max(p[2])),
-                    (min.0.min(p[0]),
-                    min.1.min(p[1]),
-                    min.2.min(p[2])),
+                    (max.0.max(p[0]), max.1.max(p[1]), max.2.max(p[2])),
+                    (min.0.min(p[0]), min.1.min(p[1]), min.2.min(p[2])),
                 )
             },
         );
-        let mut do_fill = false;
-        for i in min_x..max_x+1{
-            for j in min_y..max_y+1{
-                for k in min_z..max_z+1{
-                    let contains = self.grid_positions.contains(&[i,j,k]);
-                    if contains{
+        for i in min_x..max_x + 1 {
+            for j in min_y..max_y + 1 {
+                let mut do_fill = false;
+                for k in min_z..max_z + 1 {
+                    let contains = self.grid_positions.contains(&[i, j, k]);
+                    if contains {
                         do_fill = !do_fill;
                     }
-                    if !contains && do_fill{
-                        self.grid_positions.insert([i,j,k]);
+                    if !contains && do_fill {
+                        self.grid_positions.insert([i, j, k]);
                     }
                 }
             }
@@ -196,6 +188,18 @@ impl<T: Float> Voxels<T> {
             .map(|(i, (j, k))| [i, j, k])
             .collect();
         (vertices, indices, normals)
+    }
+    pub fn point_cloud(&self) -> Vec<[T; 3]> {
+        self.grid_positions
+            .iter()
+            .map(|v| {
+                [
+                    T::from(v[0]).unwrap() * self.step,
+                    T::from(v[1]).unwrap() * self.step,
+                    T::from(v[2]).unwrap() * self.step,
+                ]
+            })
+            .collect()
     }
 }
 
