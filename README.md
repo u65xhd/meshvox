@@ -1,9 +1,9 @@
 # meshvox
-A simple, almost no dependencies, CPU based mesh voxelizer written in rust
+A simple, CPU based mesh voxelizer written in rust
 
 ![](teapot.png)
 
-## Usage
+## Example
 
 ```rust
 use meshvox::Voxels;

@@ -1,4 +1,4 @@
-use num_traits::{Float, One, Zero};
+use num_traits::{One, Zero};
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Debug, Copy, PartialEq)]
