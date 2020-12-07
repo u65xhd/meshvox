@@ -101,6 +101,9 @@ impl<T: Float> Voxels<T> {
         }
     }
     pub fn voxelize(vertices: &Vec<[T; 3]>, indices: &Vec<[usize; 3]>, step: T) -> Self {
+        if step <= T::epsilon(){
+            panic!("step should be positive value");
+        }
         let mut tris = Vec::new();
         for index in indices {
             let p1 = Vector3::new(
