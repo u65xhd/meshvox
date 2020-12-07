@@ -3,6 +3,12 @@ name = "meshvox"
 version = "0.1.0"
 authors = ["daidanretsu <daidanretsu@outlook.jp>"]
 edition = "2018"
+description = "A simple CPU based mesh voxelizer"
+keywords = ["voxel", "voxelizer", "geo"]
+license = "MIT"
+repository ="https://github.com/daidanretsu/meshvox"
+documentation = "https://docs.rs/meshvox/"
+readme = "README.md"
 
 [dependencies]
 num-traits = "0.2.8"
