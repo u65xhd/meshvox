@@ -32,17 +32,18 @@ impl<T: Float> Triangle<T> {
         }
     }
     fn voxelize(&self, step: T) -> Vec<[isize; 3]> {
+        let eps = T::epsilon()*((T::one()+T::one())*(T::one()+T::one())*(T::one()+T::one())+(T::one()+T::one()));
         let aabb = self.grid_aabb(step);
         let mut voxels = Vec::new();
         for i in (aabb.min.x)..(aabb.max.x + 2) {
             for j in (aabb.min.y)..(aabb.max.y + 2) {
                 for k in (aabb.min.z)..(aabb.max.z + 2) {
-                    let centor = Vector3::new(
+                    let center = Vector3::new(
                         T::from(i).unwrap(),
                         T::from(j).unwrap(),
                         T::from(k).unwrap(),
                     ) * step;
-                    let aabb = AABB::new(&centor, step);
+                    let aabb = AABB::new(&center, step+eps);
                     if triangle_aabb_intersects(self, &aabb) {
                         voxels.push([i, j, k]);
                     }
@@ -75,17 +76,21 @@ pub(crate) struct AABB<T: Copy> {
 }
 
 impl<T: Float> AABB<T> {
-    fn new(centor: &Vector3<T>, size: T) -> Self {
+    fn new(center: &Vector3<T>, size: T) -> Self {
         let half = size / (T::one() + T::one());
         AABB {
-            min: *centor - Vector3::new(half, half, half),
-            max: *centor + Vector3::new(half, half, half),
+            min: *center - Vector3::new(half, half, half),
+            max: *center + Vector3::new(half, half, half),
         }
     }
 }
 
+/// A set of voxels.
 pub struct Voxels<T: Float> {
+    /// A set of center points of voxels on the grid.
+    /// That is, the grid position times the step value is the center of voxel.
     pub grid_positions: HashSet<[isize; 3]>,
+    /// A width of the grid.
     pub step: T,
 }
 impl<T: Float> Voxels<T> {
@@ -124,6 +129,7 @@ impl<T: Float> Voxels<T> {
             step,
         }
     }
+    /// Fills the interior with voxels
     pub fn fill(&mut self) {
         let ((max_x, max_y, max_z), (min_x, min_y, min_z)) = self.grid_positions.iter().fold(
             (
@@ -152,7 +158,7 @@ impl<T: Float> Voxels<T> {
             }
         }
     }
-    pub fn triangle_vertices_normals(&self) -> Vec<(Vec<[T; 3]>, [T; 3])> {
+    pub fn vertices_indices(&self) -> (Vec<[T;3]>, Vec<usize>) {
         let mut meshes = Vec::new();
         for voxel_pos in self.grid_positions.iter() {
             let x_p =
@@ -183,8 +189,10 @@ impl<T: Float> Voxels<T> {
             let mut mesh = voxel_to_mesh(*voxel_pos, self.step, mesh_dir);
             meshes.append(&mut mesh);
         }
-        meshes
+        let len = meshes.len();
+        (meshes, (0..len).collect())
     }
+    /// Gets center points of boxes
     pub fn point_cloud(&self) -> Vec<[T; 3]> {
         self.grid_positions
             .iter()
@@ -203,7 +211,7 @@ fn voxel_to_mesh<T: Float>(
     voxel: [isize; 3],
     step: T,
     mesh_direction: [bool; 6],
-) -> Vec<(Vec<[T; 3]>, [T; 3])> {
+) -> Vec<[T;3]> {
     let half = step / (T::one() + T::one());
     let x = T::from(voxel[0]).unwrap() * step;
     let y = T::from(voxel[1]).unwrap() * step;
@@ -220,42 +228,38 @@ fn voxel_to_mesh<T: Float>(
     let mut mesh = Vec::new();
     // x plus
     if mesh_direction[0] {
-        mesh.push(tri_mesh(&p1, &p2, &p3));
-        mesh.push(tri_mesh(&p3, &p2, &p4));
+        mesh.append(&mut tri_mesh(&p1, &p2, &p3));
+        mesh.append(&mut tri_mesh(&p3, &p2, &p4));
     }
     // x minus
     if mesh_direction[1] {
-        mesh.push(tri_mesh(&p5, &p7, &p6));
-        mesh.push(tri_mesh(&p8, &p6, &p7));
+        mesh.append(&mut tri_mesh(&p5, &p7, &p6));
+        mesh.append(&mut tri_mesh(&p8, &p6, &p7));
     }
     // y plus
     if mesh_direction[2] {
-        mesh.push(tri_mesh(&p1, &p5, &p6));
-        mesh.push(tri_mesh(&p1, &p6, &p2));
+        mesh.append(&mut tri_mesh(&p1, &p5, &p6));
+        mesh.append(&mut tri_mesh(&p1, &p6, &p2));
     }
     // y minus
     if mesh_direction[3] {
-        mesh.push(tri_mesh(&p7, &p3, &p8));
-        mesh.push(tri_mesh(&p3, &p4, &p8));
+        mesh.append(&mut tri_mesh(&p7, &p3, &p8));
+        mesh.append(&mut tri_mesh(&p3, &p4, &p8));
     }
     // z plus
     if mesh_direction[4] {
-        mesh.push(tri_mesh(&p7, &p5, &p1));
-        mesh.push(tri_mesh(&p7, &p1, &p3));
+        mesh.append(&mut tri_mesh(&p7, &p5, &p1));
+        mesh.append(&mut tri_mesh(&p7, &p1, &p3));
     }
     // z minus
     if mesh_direction[5] {
-        mesh.push(tri_mesh(&p6, &p8, &p2));
-        mesh.push(tri_mesh(&p8, &p4, &p2));
+        mesh.append(&mut tri_mesh(&p6, &p8, &p2));
+        mesh.append(&mut tri_mesh(&p8, &p4, &p2));
     }
     mesh
 }
 
 #[inline]
-fn tri_mesh<T: Float>(p1: &Vector3<T>, p2: &Vector3<T>, p3: &Vector3<T>) -> (Vec<[T; 3]>, [T; 3]) {
-    let normal = (*p2 - *p1).cross(&(*p3 - *p1)).normalize();
-    (
-        vec![[p1.x, p1.y, p1.z], [p2.x, p2.y, p2.z], [p3.x, p3.y, p3.z]],
-        [normal.x, normal.y, normal.z],
-    )
+fn tri_mesh<T: Float>(p1: &Vector3<T>, p2: &Vector3<T>, p3: &Vector3<T>) -> Vec<[T;3]> {
+    vec![[p1.x, p1.y, p1.z], [p2.x, p2.y, p2.z], [p3.x, p3.y, p3.z]]
 }
