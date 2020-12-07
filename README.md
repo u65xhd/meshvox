@@ -1,10 +1,11 @@
 # meshvox
 ![Build Status](https://github.com/daidanretsu/meshvox/workflows/Rust/badge.svg) [![crates.io](https://img.shields.io/crates/v/meshvox.svg)](https://crates.io/crates/meshvox)
+
 A simple, CPU based mesh voxelizer written in rust
 
-![](teapot.png)
+[Documentation](https://docs.rs/meshvox/).
 
-[Documentation](https://docs.rs/meshvox/)
+![](teapot.png)
 
 ## Example
 
