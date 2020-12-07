@@ -38,14 +38,6 @@ impl<T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Zero + One + Copy>
     }
 }
 
-impl<T: Float> Vector3<T> {
-    #[inline]
-    pub(crate) fn normalize(&self) -> Self {
-        let norm = self.dot(self).sqrt();
-        *self / norm
-    }
-}
-
 impl<T: Copy> Clone for Vector3<T> {
     #[inline]
     fn clone(&self) -> Self {
