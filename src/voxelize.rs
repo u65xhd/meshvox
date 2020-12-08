@@ -87,8 +87,8 @@ impl<T: Float> AABB<T> {
 
 /// A set of voxels.
 pub struct Voxels<T: Float> {
-    /// A set of center points of voxels on the grid.
-    /// That is, the grid position times the step value is the center of voxel.
+    /// A set of positions of voxels on the grid.
+    /// That is, the grid position times the step value is the center position of voxel.
     pub grid_positions: HashSet<[isize; 3]>,
     /// A width of the grid.
     pub step: T,
@@ -100,26 +100,27 @@ impl<T: Float> Voxels<T> {
             step,
         }
     }
-    pub fn voxelize(vertices: &Vec<[T; 3]>, indices: &Vec<[usize; 3]>, step: T) -> Self {
+    pub fn voxelize(vertices: &Vec<[T; 3]>, indices: &Vec<usize>, step: T) -> Self {
         if step <= T::epsilon(){
             panic!("step should be positive value");
         }
         let mut tris = Vec::new();
-        for index in indices {
+        let len = indices.len();
+        for i in (0..len).step_by(3) {
             let p1 = Vector3::new(
-                vertices[index[0]][0],
-                vertices[index[0]][1],
-                vertices[index[0]][2],
+                vertices[indices[i]][0],
+                vertices[indices[i]][1],
+                vertices[indices[i]][2],
             );
             let p2 = Vector3::new(
-                vertices[index[1]][0],
-                vertices[index[1]][1],
-                vertices[index[1]][2],
+                vertices[indices[i+1]][0],
+                vertices[indices[i+1]][1],
+                vertices[indices[i+1]][2],
             );
             let p3 = Vector3::new(
-                vertices[index[2]][0],
-                vertices[index[2]][1],
-                vertices[index[2]][2],
+                vertices[indices[i+2]][0],
+                vertices[indices[i+2]][1],
+                vertices[indices[i+2]][2],
             );
             tris.push(Triangle::new(&p1, &p2, &p3));
         }
