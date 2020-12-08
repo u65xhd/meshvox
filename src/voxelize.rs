@@ -100,7 +100,7 @@ impl<T: Float> Voxels<T> {
             step,
         }
     }
-    pub fn voxelize(vertices: &Vec<[T; 3]>, indices: &Vec<usize>, step: T) -> Self {
+    pub fn voxelize(vertices: &[[T; 3]], indices: &[usize], step: T) -> Self {
         if step <= T::epsilon(){
             panic!("step should be positive value");
         }
