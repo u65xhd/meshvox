@@ -1,6 +1,6 @@
 [package]
 name = "meshvox"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["daidanretsu <daidanretsu@outlook.jp>"]
 edition = "2018"
 description = "A simple CPU based mesh voxelizer"
