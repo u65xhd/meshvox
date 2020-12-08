@@ -8,7 +8,6 @@ A simple, CPU based mesh voxelizer written in rust
 ![](teapot.png)
 
 ## Example
-
 ```rust
 use meshvox::Voxels;
 use std::fs::File;
@@ -29,7 +28,7 @@ fn main()-> Result<(), Box<dyn std::error::Error>>{
     let i5 = [2, 4, 1];
 
     let vertices = vec![p0, p1, p2, p3, p4];
-    let indices = vec![i0, i1, i2, i3, i4, i5];
+    let indices = vec![i0, i1, i2, i3, i4, i5].iter().flatten().map(|i|*i).collect::<Vec<_>>();
 
     let box_size = 0.05;
     let pyramid = Voxels::voxelize(&vertices, &indices, box_size);
