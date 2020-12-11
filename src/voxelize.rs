@@ -39,13 +39,13 @@ impl<T: Float> Triangle<T> {
         let tri_aabb = self.grid_aabb(step);
         let mut voxels = Vec::new();
         let mut intersects_pre = false;
-        for i in (tri_aabb.min.x)..(tri_aabb.max.x + 1) {
-            for j in (tri_aabb.min.y)..(tri_aabb.max.y + 1) {
-                for k in (tri_aabb.min.z)..(tri_aabb.max.z + 1) {
+        for x in (tri_aabb.min.x)..(tri_aabb.max.x + 1) {
+            for y in (tri_aabb.min.y)..(tri_aabb.max.y + 1) {
+                for z in (tri_aabb.min.z)..(tri_aabb.max.z + 1) {
                     let min = Vector3::new(
-                        T::from(i).unwrap(),
-                        T::from(j).unwrap(),
-                        T::from(k).unwrap(),
+                        T::from(x).unwrap(),
+                        T::from(y).unwrap(),
+                        T::from(z).unwrap(),
                     ) * step;
                     let max = min + step_vec;
                     let aabb = AABB {
@@ -54,7 +54,7 @@ impl<T: Float> Triangle<T> {
                     };
                     let intersects = triangle_aabb_intersects(self, &aabb);
                     if intersects {
-                        voxels.push([i, j, k]);
+                        voxels.push([x, y, z]);
                     }
                     if intersects_pre && !intersects {
                         intersects_pre = false;
@@ -262,7 +262,7 @@ impl<T: Float> Voxels<T> {
         let len = meshes.len();
         (meshes, (0..len).collect())
     }
-    /// Gets center points of boxes
+    /// Gets minimum corner of voxels
     pub fn point_cloud(&self) -> Vec<[T; 3]> {
         self.grid_positions
             .iter()

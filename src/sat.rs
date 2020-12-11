@@ -1,5 +1,4 @@
 // Reference: Tomas Akenine-Möller, "Fast 3D Triangle-Box Overlap Testing"
-// Reference:
 
 use super::vector::Vector3;
 use super::voxelize::{Triangle, AABB};
