@@ -1,4 +1,5 @@
 // Reference: Tomas Akenine-Möller, "Fast 3D Triangle-Box Overlap Testing"
+// Reference:
 
 use super::vector::Vector3;
 use super::voxelize::{Triangle, AABB};
@@ -6,33 +7,37 @@ use num_traits::Float;
 
 pub(crate) fn triangle_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     // 3 axes tests
-    let aabb_aabb_sat = aabb_aabb_intersects(triangle, aabb);
-    if !aabb_aabb_sat {
-        return aabb_aabb_sat;
-    }
+    //let aabb_aabb_sat = aabb_aabb_intersects(triangle, aabb);
+    //if !aabb_aabb_sat {
+    //    return aabb_aabb_sat;
+    //}
+
     // 1 axis test
     let plane_aabb_sat = plane_aabb_intersects(triangle, aabb);
     if !plane_aabb_sat {
         return plane_aabb_sat;
     }
+
     // 9 axes tests
     tri_edge_aabb_intersects(triangle, aabb)
 }
 
-fn aabb_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
-    let two = T::one() + T::one();
-    let a_c = (aabb.max + aabb.min) / two;
-    let a_h = (aabb.max - aabb.min) / two;
-    let b_c = (triangle.aabb.max + triangle.aabb.min) / two;
-    let b_h = (triangle.aabb.max - triangle.aabb.min) / two;
-    (a_c.x - a_h.x <= b_c.x + b_h.x)
-        && (b_c.x - b_h.x <= a_c.x + a_h.x)
-        && (a_c.y - a_h.y <= b_c.y + b_h.y)
-        && (b_c.y - b_h.y <= a_c.y + a_h.y)
-        && (a_c.z - a_h.z <= b_c.z + b_h.z)
-        && (b_c.z - b_h.z <= a_c.z + a_h.z)
-}
+//#[inline]
+//fn aabb_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
+//    let two = T::one() + T::one();
+//    let a_c = (aabb.max + aabb.min) / two;
+//    let a_h = (aabb.max - aabb.min) / two;
+//    let b_c = (triangle.aabb.max + triangle.aabb.min) / two;
+//    let b_h = (triangle.aabb.max - triangle.aabb.min) / two;
+//    (a_c.x - a_h.x <= b_c.x + b_h.x)
+//        && (b_c.x - b_h.x <= a_c.x + a_h.x)
+//        && (a_c.y - a_h.y <= b_c.y + b_h.y)
+//        && (b_c.y - b_h.y <= a_c.y + a_h.y)
+//        && (a_c.z - a_h.z <= b_c.z + b_h.z)
+//        && (b_c.z - b_h.z <= a_c.z + a_h.z)
+//}
 
+#[inline]
 fn plane_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     let normal =
         (triangle.points[1] - triangle.points[0]).cross(&(triangle.points[2] - triangle.points[0]));
@@ -47,6 +52,7 @@ fn plane_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bo
     !((s - e) > T::zero() || (s + e) < T::zero())
 }
 
+#[inline]
 fn tri_edge_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     let two = T::one() + T::one();
     let c = (aabb.max + aabb.min) / two;
