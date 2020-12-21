@@ -108,3 +108,19 @@ impl<T: Div<Output = T> + Copy> Div<T> for Vector3<T> {
         }
     }
 }
+
+impl<T> From<(T, T, T)> for Vector3<T> {
+    fn from(t: (T, T, T)) -> Self {
+        Self {
+            x: t.0,
+            y: t.1,
+            z: t.2,
+        }
+    }
+}
+
+impl<T> Into<(T, T, T)> for Vector3<T> {
+    fn into(self) -> (T, T, T) {
+        (self.x, self.y, self.z)
+    }
+}
