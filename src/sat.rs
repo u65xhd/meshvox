@@ -21,7 +21,7 @@ pub(crate) fn triangle_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &
     tri_edge_aabb_intersects(triangle, aabb)
 }
 
-//#[inline]
+#[inline]
 fn aabb_aabb_intersects<T: Float>(triangle: &Triangle<T>, aabb: &AABB<T>) -> bool {
     let two = T::one() + T::one();
     let a_c = (aabb.max + aabb.min) / two;
